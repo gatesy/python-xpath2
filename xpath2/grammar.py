@@ -1,6 +1,9 @@
 '''
 Created on 6 Jul 2012
 
+A full XPath2 grammar parser using the pyparsing module.
+This is based on the EBNF grammar specification for XPath2 given here: http://www.w3.org/TR/xpath20/#nt-bnf 
+
 @author: James
 '''
 
@@ -13,30 +16,33 @@ ncName = Word(alphas+"_", alphanums+"-.")
 unprefixedName = ncName
 prefixedName = ncName + ":" + ncName
 qName = prefixedName | unprefixedName
-wildcard = "*" | (ncName + ":" + "*") | ("*" + ":" + ncName)
+wildcard = Literal("*") | (ncName + Literal(":*")) | (Literal("*:") + ncName)
+
+# Variable names are simply QNames
+varName = qName
+
 
 # Expr is any expression
 expr = Forward()
+exprSingle = Forward()
 
 # PathExpr
 
 # Terminals: /, // and axis
-singleSlash = Literal("/")
-doubleSlash = Literal("//")
 reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::"
 forwardAxis = oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") + "::"
-openSq = Literal("[")
-closeSq = Literal("]")
+generalComp = oneOf("= != <= < >= >")
+valueComp = Keyword("eq") | Keyword("ne") | Keyword("lt") | Keyword("le") | Keyword("gt") | Keyword("ge")
+nodeComp = oneOf("<< >>") | Keyword("is")
 
-# First pass: ignore kind tests
-#nodeTest = kindTest | nameTest
-#nameTest = qName | wildcard
+primaryExpr = literal | varRef | parenthesizedExpr | contextItemExpr | functionCall
 
-# Nodes are just QNames
-nodeTest = qName | wildcard
+predicate = Literal("[") + expr + Literal("]")
+predicateList = ZeroOrMore(predicate)
+filterExpr = primaryExpr | predicateList
 
-# Predicates
-predicateList = ZeroOrMore(openSq + expr + closeSq)
+nameTest = qName | wildcard
+nodeTest = kindTest | nameTest
 
 abbrevReverseStep = Literal("..")
 reverseStep = (reverseAxis + nodeTest) | abbrevReverseStep
@@ -44,20 +50,48 @@ reverseStep = (reverseAxis + nodeTest) | abbrevReverseStep
 abbrevForwardStep = Optional("@") + nodeTest
 forwardStep = (forwardAxis + nodeTest) | abbrevForwardStep
 
-# First pass: ignore predicates
 axisStep = (reverseStep | forwardStep) + predicateList
+stepExpr = filterExpr | axisStep
+relativePathExpr = stepExpr + ZeroOrMore((Literal("//") | Literal("/")) + stepExpr)
+pathExpr = (Literal("//") + relativePathExpr) | (Literal("/") + Optional(relativePathExpr)) | relativePathExpr
 
-# First pass: ignore filter expressions
-#stepExpr = filterExpr | axisStep
-stepExpr = axisStep
-relativePathExpr = stepExpr + ZeroOrMore((doubleSlash | singleSlash) + stepExpr)
-absolutePathExpr = ((doubleSlash | singleSlash) + relativePathExpr)
-pathExpr = absolutePathExpr | relativePathExpr
+valueExpr = pathExpr
+unaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + valueExpr
+castExpr = unaryExpr + Optional(Keyword("cast") + Keyword("as") + singleType)
+castableExpr = castExpr + Optional(Keyword("castable") + Keyword("as") + singleType)
+treatExpr = castableExpr + Optional(Keyword("treat") + Keyword("as") + sequenceType)
+instnaceofExpr = treatExpr + Optional(Keyword("instance") + Keyword("of") + sequenceType)
+intersectExceptExpr = instanceofExpr + ZeroOrMore((Keyword("intersect") | Keyword("except")) + instanceofExpr)
+unionExpr = intersectExceptExpr + ZeroOrMore((Keyword("union") | Literal("|")) + intersectExceptExpr)
+multiplicativeExpr = (unionExpr + ZeroOrMore((Literal("*") | Keyword("div") | Keyword("idiv") | 
+                                              Keyword("mod")) + unionExpr))
+additiveExpr = multiplicativeExpr + ZeroOrMore((Literal("+") | Literal("-")) + multiplicativeExpr)
+rangeExpr = additiveExpr + Optional(Keyword("to") + additiveExpr)
+comparisonExpr = rangeExpr + Optional((valueComp | generalComp | nodeComp) + rangeExpr)
+
+andExpr = comparisonExpr + ZeroOrMore(Keyword("and") + comparisonExpr)
+orExpr = andExpr + ZeroOrMore(Keyword("or") + andExpr)
+
+ifExpr = (Keyword("if") + Literal("(") + expr + Literal(")") + Keyword("then") + exprSingle + 
+    Keyword("else") + exprSingle)
+
+quantifiedExpr = ((Keyword("some") | Keyword("every")) + Literal("$") + varName + Keyword("in") + 
+    exprSingle + ZeroOrMore(Literal(",") + Literal("$") + varName + Keyword("in") + exprSingle) + 
+    Keyword("satisfies") + exprSingle)
+
+simpleForClause = (Keyword("for") + Literal("$") + varName + Keyword("in") + exprSingle 
+    + ZeroOrMore(Literal(",") + Literal("$") + varName + Keyword("in") + exprSingle))
+forExpr = simpleForClause + Keyword("return") + exprSingle
+
+exprSingle << (forExpr | quantifiedExpr | ifExpr | orExpr) 
+expr << (exprSingle + ZeroOrMore(Literal(",") + exprSingle))
+
+xpath = expr
 
 def test(strParam):
     try:
         print (strParam)
-        print (pathExpr.parseString(strParam))
+        print (xpath.parseString(strParam))
     except ParseException as err:
         print (err)
         
