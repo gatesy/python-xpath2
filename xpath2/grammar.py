@@ -12,45 +12,96 @@ build the parse hierarchy.
 from pyparsing import *
 from parsetree import *
 
+# Literals
 singleSlash = Literal("/")
 doubleSlash = Literal("//")
 stepSeparator = doubleSlash | singleSlash
 
-reverseAxis = Combine(oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::")
-forwardAxis = Combine(oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") + "::")
-
+# Names
 ncName = Word(alphas + '_', alphanums + '.-')
 qName = Optional(ncName + ':') + ncName
+qName.setParseAction(QName)
 
-reverseStep = (reverseAxis + nodeTest) | Literal('..')
-forwardStep = (forwardAxis + nodeTest) | (Optional('@') + nodeTest)
+wildcard = Literal("*") | (ncName + Literal(":*")) | (Literal("*:") + ncName) # This is how it is in the spec, but surely *:qName is right?
+wildcard.setParseAction(Wildcard)
+
+# Test types
+nameTest = qName | wildcard
+
+anyKindTest = Literal('node') + Literal('(') + Literal(')')
+anyKindTest.setParseAction(AnyKindTest)
+textTest = Literal('text') + Literal('(') + Literal(')')
+textTest.setParseAction(TextTest)
+commentTest = Literal('comment') + Literal('(') + Literal(')')
+commentTest.setParseAction(CommentTest)
+
+# TODO need to sort all these out.
+attributeTest = Literal('attribute') + Literal('(') + Optional(nameTest + Optional(Literal(",") + qName))
+
+kindTest = anyKindTest | textTest | commentTest
+
+nodeTest = nameTest | kindTest
+
+# Axis and steps
+reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::"
+forwardAxis = oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") + "::"
+
+abrvParentStep = Literal('..')
+abrvAttributeStep = Literal('@') + nodeTest
+abrvChildStep = nodeTest.copy()
+
+reverseStep = (reverseAxis + nodeTest) | abrvParentStep
+forwardStep = (forwardAxis + nodeTest) | abrvAttributeStep | abrvChildStep
 
 step = forwardStep | reverseStep
-relativePathExpr = step + ZeroOrMore((Literal("//") | Literal("/")) + step)
+step.setParseAction(Step)
 
-#pathExpr = (Literal("//") + relativePathExpr) | (Literal("/") + Optional(relativePathExpr)) | relativePathExpr
-pathExpr = (Optional(stepSeparator) + relativePathExpr) | Literal("/") 
+# Paths
+absolutePathStep = stepSeparator + step
+relativePath = step + ZeroOrMore(absolutePathStep)
+path = (Optional(stepSeparator) + relativePath) | singleSlash 
 
-def handleQName(s, loc, tokens):
-    if len(tokens) is 3:
-        return QName(tokens[0], tokens[2])
-    else:
-        return QName(None, tokens[0])
+# Handle abbreviations
+def handleAbrvParentStep(s, loc, tokens):
+    return ['parent', '::', wildcard.parseString('*')[0]]
 
-qName.setParseAction(handleQName)
+
+def handleAbrvAttributeStep(s, loc, tokens):
+    return ['attribute', '::', tokens[1]]
+
+
+def handleAbrvChildStep(s, loc, tokens):
+    return ['child', '::', tokens[0]]
+
+abrvParentStep.setParseAction(handleAbrvParentStep)
+abrvAttributeStep.setParseAction(handleAbrvAttributeStep)
+abrvChildStep.setParseAction(handleAbrvChildStep)
+
 
 def test(string, parser=qName):
     try:
         print (string)
         print (parser.parseString(string))
-    except ParseException as err:
-        print (err)
+    except BaseException as err:
+        print ('Error: ',err)
         
 if __name__ == '__main__':
-    test('nodeA')
-    #test('1node')
-    #test('')
-    test('a:node')
-    #test(':node')
-    test('an:node')
-
+    #test('nodeA', qName)
+    #test('1node', qName)
+    #test('', qName)
+    #test('a:node', qName)
+    #test(':node', qName)
+    #test('an:node', qName)
+    
+    test('nodeN', step)
+    test('parent::nodeN', step)
+    test('self::a:*', step)
+    test('child::nodeN', step)
+    test('..', step)
+    test('@name', step)
+    
+    test('A//B/@c', path)
+    test('/', path)
+    test('A/B', path)
+    test('/A/B', path)
+    test('A//C/parent::D', path)

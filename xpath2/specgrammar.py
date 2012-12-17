@@ -105,8 +105,8 @@ forwardStep = (forwardAxis + nodeTest) | abbrevForwardStep
 
 axisStep = (reverseStep | forwardStep) + predicateList
 stepExpr = filterExpr ^ axisStep
-relativePathExpr = stepExpr + ZeroOrMore((Literal("//") ^ Literal("/")) + stepExpr)
-pathExpr = (Literal("//") + relativePathExpr) | (Literal("/") + Optional(relativePathExpr)) | relativePathExpr
+relativePath = stepExpr + ZeroOrMore((Literal("//") ^ Literal("/")) + stepExpr)
+pathExpr = (Literal("//") + relativePath) | (Literal("/") + Optional(relativePath)) | relativePath
 
 valueExpr = pathExpr
 unaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + valueExpr
