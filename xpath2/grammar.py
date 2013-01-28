@@ -10,7 +10,8 @@ build the parse hierarchy.
 '''
 
 from pyparsing import *
-from parsetree import *
+from xpath2.parsetree import *
+import unittest
 
 # Literals
 singleSlash = Literal("/")
@@ -22,7 +23,7 @@ ncName = Word(alphas + '_', alphanums + '.-')
 qName = Optional(ncName + ':') + ncName
 qName.setParseAction(QName)
 
-wildcard = Literal("*") | (ncName + Literal(":*")) | (Literal("*:") + ncName) # This is how it is in the spec, but surely *:qName is right?
+wildcard = Literal("*") | (ncName + Literal(":*")) | (Literal("*:") + ncName)
 wildcard.setParseAction(Wildcard)
 
 # Test types
@@ -77,7 +78,6 @@ abrvParentStep.setParseAction(handleAbrvParentStep)
 abrvAttributeStep.setParseAction(handleAbrvAttributeStep)
 abrvChildStep.setParseAction(handleAbrvChildStep)
 
-
 def test(string, parser=qName):
     try:
         print (string)
@@ -86,12 +86,6 @@ def test(string, parser=qName):
         print ('Error: ',err)
         
 if __name__ == '__main__':
-    #test('nodeA', qName)
-    #test('1node', qName)
-    #test('', qName)
-    #test('a:node', qName)
-    #test(':node', qName)
-    #test('an:node', qName)
     
     test('nodeN', step)
     test('parent::nodeN', step)
@@ -100,8 +94,8 @@ if __name__ == '__main__':
     test('..', step)
     test('@name', step)
     
-    test('A//B/@c', path)
-    test('/', path)
-    test('A/B', path)
-    test('/A/B', path)
-    test('A//C/parent::D', path)
+    #test('A//B/@c', path)
+    #test('/', path)
+    #test('A/B', path)
+    #test('/A/B', path)
+    #test('A//C/parent::D', path)
