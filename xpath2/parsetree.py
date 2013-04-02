@@ -21,6 +21,12 @@ class QName(object):
             s += self.ns + ':'
         s += self.name + ')'
         return s
+
+    def match(self, element):
+        if self.name == element.tag:
+            return element
+        else:
+            return None
     
 class Wildcard(object):
     def __init__(self, tokens):
@@ -45,6 +51,10 @@ class Step(object):
     def __init__(self, tokens):
         self.axis = tokens[0]
         self.nodeTest = tokens[2]
+        
+    def match(self, element):
+        if self.axis == 'child':
+            return self.nodeTest.match(element)
         
     def __repr__(self):
         return 'Step(axis=' + repr(self.axis) + '; nodeTest=' + repr(self.nodeTest) + ')'

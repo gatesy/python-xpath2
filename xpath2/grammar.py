@@ -78,6 +78,8 @@ abrvParentStep.setParseAction(handleAbrvParentStep)
 abrvAttributeStep.setParseAction(handleAbrvAttributeStep)
 abrvChildStep.setParseAction(handleAbrvChildStep)
 
+Grammar = path
+
 def test(string, parser=qName):
     try:
         print (string)
