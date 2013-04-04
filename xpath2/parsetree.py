@@ -35,6 +35,40 @@ class Wildcard(object):
     def __repr__(self):
         return 'Wildcard(' + str(self.tokens) + ')'
 
+class IntegerLiteral(object):
+    def __init__(self, tokens):
+        self.number = tokens[0]
+        
+    def __repr__(self):
+        return 'IntegerLiteral(' + str(self.number) + ')'
+
+    def value(self):
+        return int(self.number)
+
+class DecimalLiteral(object):
+    leftNumber = 0
+    rightNumber = 0
+    
+    def __init__(self, tokens):
+        if len(tokens) == 3:
+            self.leftNumber = tokens[0]
+            self.rightNumber = tokens[2]
+        elif tokens[0] == '.':
+            self.rightNumber = tokens[1]
+        else: 
+            self.leftNumber = tokens[0]
+        
+    def __repr__(self):
+        return 'DecimalLiteral(' + str(self.leftNumber) + '.' + str(self.rightNumber) + ')'
+
+class DoubleLiteral(object):
+    def __init__(self, tokens):
+        self.base = tokens[0]
+        self.exponent = tokens[2]
+        
+    def __repr__(self):
+        return 'DoubleLiteral(' + str(self.base) + 'e' + str(self.exponent) + ')'
+
 class KindTest(object):
     pass
 

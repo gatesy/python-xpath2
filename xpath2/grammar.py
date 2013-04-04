@@ -43,6 +43,25 @@ kindTest = anyKindTest | textTest | commentTest
 
 nodeTest = nameTest | kindTest
 
+#
+# Primary expressions
+#
+
+# Literals
+digits = Word(nums)
+integerLiteral = digits.copy()
+integerLiteral.setParseAction(IntegerLiteral)
+decimalLiteral = (Literal ('.') + digits) | (digits + Literal('.') + Optional(digits))
+decimalLiteral.setParseAction(DecimalLiteral)
+doubleLiteral = (decimalLiteral | integerLiteral) + oneOf('e E') + Group(Optional(oneOf('+ -')) + digits)
+doubleLiteral.setParseAction(DoubleLiteral)
+
+literal = doubleLiteral ^ decimalLiteral ^ integerLiteral
+
+#
+# Paths
+#
+
 # Axis and steps
 reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::"
 forwardAxis = oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") + "::"
