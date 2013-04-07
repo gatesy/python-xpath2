@@ -6,6 +6,8 @@ Classes for representing nodes in the parse tree of an XPath2 expression
 @author: James
 '''
 
+from decimal import Decimal
+
 class QName(object):
     def __init__(self, tokens):
         if len(tokens) is 3:
@@ -36,18 +38,23 @@ class Wildcard(object):
         return 'Wildcard(' + str(self.tokens) + ')'
 
 class IntegerLiteral(object):
+    value = None
+    
     def __init__(self, tokens):
         self.number = tokens[0]
         
     def __repr__(self):
         return 'IntegerLiteral(' + str(self.number) + ')'
 
-    def value(self):
-        return int(self.number)
+    def getValue(self):
+        if self.value is None:
+            self.value = int(self.number)
+        return self.value
 
 class DecimalLiteral(object):
-    leftNumber = 0
-    rightNumber = 0
+    leftNumber = '0'
+    rightNumber = '0'
+    value = None
     
     def __init__(self, tokens):
         if len(tokens) == 3:
@@ -58,16 +65,25 @@ class DecimalLiteral(object):
         else: 
             self.leftNumber = tokens[0]
         
+    def getValue(self):
+        if self.value is None:
+            self.value = Decimal(self.leftNumber + '.' + self.rightNumber)
+        return self.value
+        
     def __repr__(self):
         return 'DecimalLiteral(' + str(self.leftNumber) + '.' + str(self.rightNumber) + ')'
 
 class DoubleLiteral(object):
     def __init__(self, tokens):
         self.base = tokens[0]
-        self.exponent = tokens[2]
+        self.exponent = tokens[2:]
         
     def __repr__(self):
         return 'DoubleLiteral(' + str(self.base) + 'e' + str(self.exponent) + ')'
+
+    def getValue(self):
+        return 0.0
+        
 
 class KindTest(object):
     pass

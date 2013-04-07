@@ -53,7 +53,7 @@ integerLiteral = digits.copy()
 integerLiteral.setParseAction(IntegerLiteral)
 decimalLiteral = (Literal ('.') + digits) | (digits + Literal('.') + Optional(digits))
 decimalLiteral.setParseAction(DecimalLiteral)
-doubleLiteral = (decimalLiteral | integerLiteral) + oneOf('e E') + Group(Optional(oneOf('+ -')) + digits)
+doubleLiteral = (decimalLiteral | integerLiteral) + oneOf('e E') + Optional(oneOf('+ -')) + digits
 doubleLiteral.setParseAction(DoubleLiteral)
 
 literal = doubleLiteral ^ decimalLiteral ^ integerLiteral

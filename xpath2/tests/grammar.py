@@ -8,6 +8,7 @@ import sys
 from xpath2.grammar import qName, step, literal, nameTest
 from xpath2 import parsetree
 from pyparsing import ParseException
+from decimal import Decimal
 
 class TestQName(unittest.TestCase):
     def test_noNS(self):
@@ -35,6 +36,8 @@ class TestQName(unittest.TestCase):
 class TestLiteral(unittest.TestCase):
     def setUp(self):
         self.integers = [1, sys.maxsize, 0] + random.sample(range(sys.maxsize), 50)
+        self.decimals = [(Decimal('0.1'),'0.1'), (Decimal('1.0'),'1.0'), (Decimal('0.1'),'.1')]
+        self.doubles = [(0.1, '0.1e0')]
     
     def test_numbers(self):
         result = literal.parseString('.12')
@@ -54,16 +57,22 @@ class TestLiteral(unittest.TestCase):
         for valueStr in testIntegerStrings:
             result = literal.parseString(valueStr)
             self.assertIsInstance(result[0], parsetree.IntegerLiteral)
-            self.assertEquals(result[0].value(), int(valueStr))
+            self.assertEquals(result[0].getValue(), int(valueStr))
             
         self.assertRaises(ParseException, literal.parseString, '')
         self.assertRaises(ParseException, literal.parseString, '-1')
         
     def test_decimal(self):
-        pass
+        for (value, valueStr) in self.decimals:
+            result = literal.parseString(valueStr)
+            self.assertIsInstance(result[0], parsetree.DecimalLiteral)
+            self.assertEquals(result[0].getValue(), value)
         
     def test_double(self):
-        pass
+        for (value, valueStr) in self.doubles:
+            result = literal.parseString(valueStr)
+            self.assertIsInstance(result[0], parsetree.DoubleLiteral)
+            self.assertEquals(result[0].getValue(), value)
 
 class TestStep(unittest.TestCase):
     def setUp(self):
