@@ -49,14 +49,25 @@ nodeTest = nameTest | kindTest
 
 # Literals
 digits = Word(nums)
+
 integerLiteral = digits.copy()
 integerLiteral.setParseAction(IntegerLiteral)
+
 decimalLiteral = (Literal ('.') + digits) | (digits + Literal('.') + Optional(digits))
 decimalLiteral.setParseAction(DecimalLiteral)
+
 doubleLiteral = (decimalLiteral | integerLiteral) + oneOf('e E') + Optional(oneOf('+ -')) + digits
 doubleLiteral.setParseAction(DoubleLiteral)
 
-literal = doubleLiteral ^ decimalLiteral ^ integerLiteral
+escapedDblQuote = Literal('""')
+escapedDblQuote.setParseAction(EscapedDblQuote)
+escapedSglQuote = Literal("''")
+escapedSglQuote.setParseAction(EscapedSglQuote)
+stringLiteral = (Literal('"') + ZeroOrMore(escapedDblQuote | CharsNotIn('"')) + Literal('"')) \
+    | (Literal("'") + ZeroOrMore(escapedSglQuote | CharsNotIn("'")) + Literal("'"))
+stringLiteral.setParseAction(StringLiteral)
+
+literal = stringLiteral | doubleLiteral | decimalLiteral | integerLiteral
 
 #
 # Paths
@@ -107,13 +118,13 @@ def test(string, parser=qName):
         print ('Error: ',err)
         
 if __name__ == '__main__':
-    
-    test('nodeN', step)
-    test('parent::nodeN', step)
-    test('self::a:*', step)
-    test('child::nodeN', step)
-    test('..', step)
-    test('@name', step)
+    pass
+    #test('nodeN', step)
+    #test('parent::nodeN', step)
+    #test('self::a:*', step)
+    #test('child::nodeN', step)
+    #test('..', step)
+    #test('@name', step)
     
     #test('A//B/@c', path)
     #test('/', path)

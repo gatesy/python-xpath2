@@ -37,6 +37,9 @@ class Wildcard(object):
     def __repr__(self):
         return 'Wildcard(' + str(self.tokens) + ')'
 
+#
+# Literals
+#
 class IntegerLiteral(object):
     value = None
     
@@ -74,6 +77,8 @@ class DecimalLiteral(object):
         return 'DecimalLiteral(' + str(self.leftNumber) + '.' + str(self.rightNumber) + ')'
 
 class DoubleLiteral(object):
+    value = None
+    
     def __init__(self, tokens):
         self.base = tokens[0]
         self.exponent = tokens[2:]
@@ -82,8 +87,44 @@ class DoubleLiteral(object):
         return 'DoubleLiteral(' + str(self.base) + 'e' + str(self.exponent) + ')'
 
     def getValue(self):
-        return 0.0
+        if self.value is None:
+            self.value = float(str(self.base.getValue()) + 'e' + ''.join(self.exponent))
+        return self.value
         
+class EscapedDblQuote(object):
+    value = '"'
+    
+    def __init__(self, tokens):
+        pass
+        
+    def __repr__(self):
+        return self.value
+    
+class EscapedSglQuote(object):
+    value = "'"
+    
+    def __init__(self, tokens):
+        pass
+
+    def __repr__(self):
+        return self.value
+        
+    def __str__(self):
+        return self.value
+
+class StringLiteral(object):
+    value = None
+    
+    def __init__(self, tokens):
+        self.parts = tokens[1:len(tokens)-1]
+        
+    def getValue(self):
+        if self.value is None:
+            self.value = ''.join(map(str, self.parts))
+        return self.value
+        
+    def __repr__(self):
+        return 'StringLiteral(' + str(self.parts) + ')'
 
 class KindTest(object):
     pass

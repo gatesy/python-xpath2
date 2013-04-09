@@ -37,19 +37,10 @@ class TestLiteral(unittest.TestCase):
     def setUp(self):
         self.integers = [1, sys.maxsize, 0] + random.sample(range(sys.maxsize), 50)
         self.decimals = [(Decimal('0.1'),'0.1'), (Decimal('1.0'),'1.0'), (Decimal('0.1'),'.1')]
-        self.doubles = [(0.1, '0.1e0')]
-    
-    def test_numbers(self):
-        result = literal.parseString('.12')
-        print (result)
-        result = literal.parseString('1.1')
-        print (result)
-        result = literal.parseString('0.1')
-        print (result)
-        result = literal.parseString('1e2')
-        print (result)
-        result = literal.parseString('1.0E+4')
-        print(result)
+        self.doubles = [(0.1, '0.1e0'), (1.1, '1.1e0'), (1000.1, '1.0001e3'), (0.0001, '1e-4')]
+        self.strings = [('a', '"a"'), ('a', "'a'"), ('\'a\'', "'''a'''"), ('"a"', '"""a"""'), \
+            ('"a" \'b', '\'"a" \'\'b\'')]
+        self.fails = ['', '-1', '-1.0', '-.1', '"a', 'a"', "'a", "a'"]
 
     def test_integer(self):
         testIntegerStrings = map(str, self.integers)
@@ -58,9 +49,6 @@ class TestLiteral(unittest.TestCase):
             result = literal.parseString(valueStr)
             self.assertIsInstance(result[0], parsetree.IntegerLiteral)
             self.assertEquals(result[0].getValue(), int(valueStr))
-            
-        self.assertRaises(ParseException, literal.parseString, '')
-        self.assertRaises(ParseException, literal.parseString, '-1')
         
     def test_decimal(self):
         for (value, valueStr) in self.decimals:
@@ -73,6 +61,16 @@ class TestLiteral(unittest.TestCase):
             result = literal.parseString(valueStr)
             self.assertIsInstance(result[0], parsetree.DoubleLiteral)
             self.assertEquals(result[0].getValue(), value)
+            
+    def test_string(self):
+        for (value, valueStr) in self.strings:
+            result = literal.parseString(valueStr)
+            self.assertIsInstance(result[0], parsetree.StringLiteral)
+            self.assertEquals(result[0].getValue(), value)
+            
+    def test_fails(self):
+        for value in self.fails:
+            self.assertRaises(ParseException, literal.parseString, value)
 
 class TestStep(unittest.TestCase):
     def setUp(self):
