@@ -69,6 +69,47 @@ stringLiteral.setParseAction(StringLiteral)
 
 literal = stringLiteral | doubleLiteral | decimalLiteral | integerLiteral
 
+# Variable references
+variableRef = Literal('$') + qName
+variableRef.setParseAction(VariableRef)
+
+primaryExpr = variableRef | literal
+
+# Arithmetic
+#unaryExpr = Optional(oneOf('- +')) + primaryExpr # Should be a 'pathExpr' - use primary for now
+singleType = qName + Optional('?')
+sequenceType = qName # FIXME and some other stuff...
+
+signOp = oneOf('+ -')
+castAsOp = Keyword('cast') + Keyword('as') + singleType
+castableAsOp = Keyword('castable') + Keyword('as') + singleType
+treatAsOp = Keyword('treat') + Keyword('as') + sequenceType
+instanceOfOp = Keyword('instance') + Keyword('of') + sequenceType
+intersectOp = Keyword('intersect') | Keyword('except')
+unionOp = Keyword('union') | Literal('|')
+multiOp = Literal('*') | Literal('div') | Literal('idiv') | Literal('mod')
+addOp = Literal('+') | Literal('-')
+
+signOp.setParseAction(UnaryOp)
+intersectOp.setParseAction(BinaryOp)
+unionOp.setParseAction(BinaryOp)
+multiOp.setParseAction(BinaryOp)
+addOp.setParseAction(BinaryOp)
+
+unaryExpr = operatorPrecedence(primaryExpr, [ # FIXME Should be 'pathExpr' not primaryExpr
+    (signOp, 1, opAssoc.RIGHT),
+    (castAsOp, 1, opAssoc.LEFT),
+    (castableAsOp, 1, opAssoc.LEFT),
+    (treatAsOp, 1, opAssoc.LEFT),
+    (instanceOfOp, 1, opAssoc.LEFT),
+    (intersectOp, 2, opAssoc.LEFT),
+    (unionOp, 2, opAssoc.LEFT),
+    (multiOp, 2, opAssoc.LEFT),
+    (addOp, 2, opAssoc.LEFT)
+    ])
+
+# TODO add a 'binaryExpr' using operator precedence, since all unary ops have precedence over binary ops.
+
 #
 # Paths
 #

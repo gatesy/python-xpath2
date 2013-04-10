@@ -126,6 +126,28 @@ class StringLiteral(object):
     def __repr__(self):
         return 'StringLiteral(' + str(self.parts) + ')'
 
+class VariableRef(object):
+    
+    def __init__(self, tokens):
+        self.name = tokens[1]
+        
+    def __repr__(self):
+        return 'VariableRef(' + str(self.name) + ')'
+
+class UnaryOp(object):
+    def __init__(self, tokens):
+        self.op = tokens[0]
+        
+    def __repr__(self):
+        return 'UnaryOp(' + self.op + ')'
+
+class BinaryOp(object):
+    def __init__(self, tokens):
+        self.op = tokens[0]
+        
+    def __repr__(self):
+        return 'BinaryOp(' + self.op + ')'
+
 class KindTest(object):
     pass
 
