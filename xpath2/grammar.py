@@ -13,6 +13,11 @@ from pyparsing import *
 from xpath2.parsetree import *
 import unittest
 
+# Expressions: the top-level part of the recursion in the grammar.
+singleExpr = Forward() 
+expr = singleExpr + ZeroOrMore(Literal(',') + singleExpr)
+parenthesizedExpr = Literal('(') + expr + Literal(')')
+
 # Literals
 singleSlash = Literal("/")
 doubleSlash = Literal("//")
@@ -73,7 +78,7 @@ literal = stringLiteral | doubleLiteral | decimalLiteral | integerLiteral
 variableRef = Literal('$') + qName
 variableRef.setParseAction(VariableRef)
 
-primaryExpr = variableRef | literal
+primaryExpr = variableRef | literal | parenthesizedExpr
 
 # Arithmetic
 #unaryExpr = Optional(oneOf('- +')) + primaryExpr # Should be a 'pathExpr' - use primary for now
@@ -110,9 +115,14 @@ unaryExpr = operatorPrecedence(primaryExpr, [ # FIXME Should be 'pathExpr' not p
 
 # TODO add a 'binaryExpr' using operator precedence, since all unary ops have precedence over binary ops.
 
+singleExpr << unaryExpr # FIXME This is wrong.
+
 #
 # Paths
 #
+
+# Predicates
+predicate = Literal('[') + expr + Literal(']')
 
 # Axis and steps
 reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::"
@@ -125,7 +135,7 @@ abrvChildStep = nodeTest.copy()
 reverseStep = (reverseAxis + nodeTest) | abrvParentStep
 forwardStep = (forwardAxis + nodeTest) | abrvAttributeStep | abrvChildStep
 
-step = forwardStep | reverseStep
+step = ((forwardStep | reverseStep) | primaryExpr) + ZeroOrMore(predicate)
 step.setParseAction(Step)
 
 # Paths
