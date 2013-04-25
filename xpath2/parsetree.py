@@ -164,10 +164,26 @@ class Step(object):
     def __init__(self, tokens):
         self.axis = tokens[0]
         self.nodeTest = tokens[2]
+        self.predicates = tokens[3:]
         
     def match(self, element):
         if self.axis == 'child':
             return self.nodeTest.match(element)
         
     def __repr__(self):
-        return 'Step(axis=' + repr(self.axis) + '; nodeTest=' + repr(self.nodeTest) + ')'
+        return 'Step(axis=' + repr(self.axis) + '; nodeTest=' + repr(self.nodeTest) + '; predicates=' \
+            + repr(self.predicates) + ')'
+
+class Predicate(object):
+    def __init__(self, tokens):
+        self.expr = tokens[1]
+        
+    def __repr__(self):
+        return 'Predicate(expr=' + repr(self.expr) + ')'
+        
+class ContextItem(object):
+    def __init__(self,tokens):
+        pass
+        
+    def __repr__(self):
+        return 'ContextItem'

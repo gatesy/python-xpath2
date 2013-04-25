@@ -18,7 +18,8 @@ singleExpr = Forward()
 expr = singleExpr + ZeroOrMore(Literal(',') + singleExpr)
 parenthesizedExpr = Literal('(') + expr + Literal(')')
 
-# Literals
+# Literals 
+# TODO move these some where sensible - currently used by the path expressions.
 singleSlash = Literal("/")
 doubleSlash = Literal("//")
 stepSeparator = doubleSlash | singleSlash
@@ -78,10 +79,68 @@ literal = stringLiteral | doubleLiteral | decimalLiteral | integerLiteral
 variableRef = Literal('$') + qName
 variableRef.setParseAction(VariableRef)
 
-primaryExpr = variableRef | literal | parenthesizedExpr
+# Function calls
+functionCall = qName + Literal('(') + Optional(singleExpr + ZeroOrMore(Literal(',') + singleExpr)) + Literal(')')
 
+# Context item
+contextItem = Literal('.')
+contextItem.setParseAction(ContextItem)
+
+primaryExpr = variableRef | literal | parenthesizedExpr | functionCall | contextItem
+
+
+#
+# Paths
+#
+
+# Predicates
+predicate = Literal('[') + expr + Literal(']')
+predicate.setParseAction(Predicate)
+
+# Axis and steps
+reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") \
+    + Literal("::")
+forwardAxis = oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") \
+    + Literal("::")
+
+abrvParentStep = Literal('..')
+abrvAttributeStep = Literal('@') + nodeTest
+abrvChildStep = nodeTest.copy()
+
+reverseStep = (reverseAxis + nodeTest) | abrvParentStep
+forwardStep = (forwardAxis + nodeTest) | abrvAttributeStep | abrvChildStep
+
+step = (forwardStep | reverseStep) + ZeroOrMore(predicate)
+step.setParseAction(Step)
+
+filterExpr = primaryExpr + ZeroOrMore(predicate)
+stepExpr = filterExpr | step
+
+# Paths
+absolutePathStep = stepSeparator + stepExpr
+relativePath = stepExpr + ZeroOrMore(absolutePathStep)
+path = (Optional(stepSeparator) + relativePath) | singleSlash 
+
+# Handle abbreviations
+def handleAbrvParentStep(s, loc, tokens):
+    return ['parent', '::', wildcard.parseString('*')[0]]
+
+
+def handleAbrvAttributeStep(s, loc, tokens):
+    return ['attribute', '::', tokens[1]]
+
+
+def handleAbrvChildStep(s, loc, tokens):
+    return ['child', '::', tokens[0]]
+
+abrvParentStep.setParseAction(handleAbrvParentStep)
+abrvAttributeStep.setParseAction(handleAbrvAttributeStep)
+abrvChildStep.setParseAction(handleAbrvChildStep)
+
+#
 # Arithmetic
-#unaryExpr = Optional(oneOf('- +')) + primaryExpr # Should be a 'pathExpr' - use primary for now
+#
+
 singleType = qName + Optional('?')
 sequenceType = qName # FIXME and some other stuff...
 
@@ -101,65 +160,69 @@ unionOp.setParseAction(BinaryOp)
 multiOp.setParseAction(BinaryOp)
 addOp.setParseAction(BinaryOp)
 
-unaryExpr = operatorPrecedence(primaryExpr, [ # FIXME Should be 'pathExpr' not primaryExpr
-    (signOp, 1, opAssoc.RIGHT),
-    (castAsOp, 1, opAssoc.LEFT),
-    (castableAsOp, 1, opAssoc.LEFT),
-    (treatAsOp, 1, opAssoc.LEFT),
-    (instanceOfOp, 1, opAssoc.LEFT),
-    (intersectOp, 2, opAssoc.LEFT),
-    (unionOp, 2, opAssoc.LEFT),
-    (multiOp, 2, opAssoc.LEFT),
-    (addOp, 2, opAssoc.LEFT)
-    ])
+#unaryExpr = operatorPrecedence(primaryExpr, [ # FIXME Should be 'pathExpr' not primaryExpr
+#    (signOp, 1, opAssoc.RIGHT),
+#    (castAsOp, 1, opAssoc.LEFT),
+#   (castableAsOp, 1, opAssoc.LEFT),
+#   (treatAsOp, 1, opAssoc.LEFT),
+#    (instanceOfOp, 1, opAssoc.LEFT),
+#    (intersectOp, 2, opAssoc.LEFT),
+#   (unionOp, 2, opAssoc.LEFT),
+#    (multiOp, 2, opAssoc.LEFT),
+#    (addOp, 2, opAssoc.LEFT)
+#    ])
 
-# TODO add a 'binaryExpr' using operator precedence, since all unary ops have precedence over binary ops.
-
-singleExpr << unaryExpr # FIXME This is wrong.
+unary = ZeroOrMore(signOp) + path
+castAs = unary + Optional(castAsOp)
+castableAs = castAs + Optional(castableAsOp)
+treatAs = castableAs + Optional(treatAsOp)
+instanceOf = treatAs + Optional(instanceOfOp)
+intersect = instanceOf + ZeroOrMore(intersectOp + instanceOf)
+union = intersect + ZeroOrMore(unionOp + intersect)
+multi = union + ZeroOrMore(multiOp + union)
+add = multi + ZeroOrMore(addOp + multi)
 
 #
-# Paths
+# Other operators
 #
 
-# Predicates
-predicate = Literal('[') + expr + Literal(']')
+# Sequence construction
+rangeOp = Keyword('to')
+rangeOp.setParseAction(BinaryOp)
+range = add + Optional(rangeOp + add)
 
-# Axis and steps
-reverseAxis = oneOf("parent ancestor preceding-sibling preceding ancestor-or-self") + "::"
-forwardAxis = oneOf("child descendant attribute self descendant-or-self following-sibling following namespace") + "::"
+# Comparisons
+valueCompOp = oneOf('eq ne lt le gt ge')
+generalCompOp = oneOf('= != < <= > >=')
+nodeCompOp = oneOf('is << >>')
+comparison = range + Optional((valueCompOp | generalCompOp | nodeCompOp) + range)
 
-abrvParentStep = Literal('..')
-abrvAttributeStep = Literal('@') + nodeTest
-abrvChildStep = nodeTest.copy()
+# Logical
+andExpr = comparison + ZeroOrMore(Keyword('and') + comparison)
+orExpr = andExpr + ZeroOrMore(Keyword('or') + andExpr)
 
-reverseStep = (reverseAxis + nodeTest) | abrvParentStep
-forwardStep = (forwardAxis + nodeTest) | abrvAttributeStep | abrvChildStep
+#
+# If, quantified and for
+#
 
-step = ((forwardStep | reverseStep) | primaryExpr) + ZeroOrMore(predicate)
-step.setParseAction(Step)
+ifExpr = Keyword('if') + Literal('(') + expr + Literal(')') + Keyword('then') + singleExpr \
+    + Keyword('else') + singleExpr
+    
+variableInExprList = variableRef + Keyword('in') + singleExpr \
+    + ZeroOrMore(Literal(',') + variableRef + Keyword('in') + singleExpr)
 
-# Paths
-absolutePathStep = stepSeparator + step
-relativePath = step + ZeroOrMore(absolutePathStep)
-path = (Optional(stepSeparator) + relativePath) | singleSlash 
+forExpr = Keyword('for') + variableInExprList
+    
+quantified = (Keyword('some') | Keyword('every')) + variableInExprList + Keyword('satisfies') + singleExpr
 
-# Handle abbreviations
-def handleAbrvParentStep(s, loc, tokens):
-    return ['parent', '::', wildcard.parseString('*')[0]]
+#
+# Top level recursive expression.
+#
+# TODO Make sure this is changed as we add more operators to the grammar
+singleExpr << (forExpr | quantified | ifExpr | orExpr)
 
-
-def handleAbrvAttributeStep(s, loc, tokens):
-    return ['attribute', '::', tokens[1]]
-
-
-def handleAbrvChildStep(s, loc, tokens):
-    return ['child', '::', tokens[0]]
-
-abrvParentStep.setParseAction(handleAbrvParentStep)
-abrvAttributeStep.setParseAction(handleAbrvAttributeStep)
-abrvChildStep.setParseAction(handleAbrvChildStep)
-
-Grammar = path
+# Grammar definition
+Grammar = expr
 
 def test(string, parser=qName):
     try:
