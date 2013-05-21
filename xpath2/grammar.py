@@ -81,6 +81,7 @@ variableRef.setParseAction(VariableRef)
 
 # Function calls
 functionCall = qName + Literal('(') + Optional(singleExpr + ZeroOrMore(Literal(',') + singleExpr)) + Literal(')')
+functionCall.setParseAction(FunctionCall)
 
 # Context item
 contextItem = Literal('.')
@@ -154,12 +155,6 @@ unionOp = Keyword('union') | Literal('|')
 multiOp = Literal('*') | Literal('div') | Literal('idiv') | Literal('mod')
 addOp = Literal('+') | Literal('-')
 
-signOp.setParseAction(UnaryOp)
-intersectOp.setParseAction(BinaryOp)
-unionOp.setParseAction(BinaryOp)
-multiOp.setParseAction(BinaryOp)
-addOp.setParseAction(BinaryOp)
-
 #unaryExpr = operatorPrecedence(primaryExpr, [ # FIXME Should be 'pathExpr' not primaryExpr
 #    (signOp, 1, opAssoc.RIGHT),
 #    (castAsOp, 1, opAssoc.LEFT),
@@ -173,14 +168,19 @@ addOp.setParseAction(BinaryOp)
 #    ])
 
 unary = ZeroOrMore(signOp) + path
+unary.setParseAction(unaryOpHelper)
 castAs = unary + Optional(castAsOp)
 castableAs = castAs + Optional(castableAsOp)
 treatAs = castableAs + Optional(treatAsOp)
 instanceOf = treatAs + Optional(instanceOfOp)
 intersect = instanceOf + ZeroOrMore(intersectOp + instanceOf)
+intersect.setParseAction(binaryOpLeftAssocHelper)
 union = intersect + ZeroOrMore(unionOp + intersect)
+union.setParseAction(binaryOpLeftAssocHelper)
 multi = union + ZeroOrMore(multiOp + union)
+multi.setParseAction(binaryOpLeftAssocHelper)
 add = multi + ZeroOrMore(addOp + multi)
+add.setParseAction(binaryOpLeftAssocHelper)
 
 #
 # Other operators
@@ -188,18 +188,21 @@ add = multi + ZeroOrMore(addOp + multi)
 
 # Sequence construction
 rangeOp = Keyword('to')
-rangeOp.setParseAction(BinaryOp)
 range = add + Optional(rangeOp + add)
+range.setParseAction(binaryOpLeftAssocHelper)
 
 # Comparisons
 valueCompOp = oneOf('eq ne lt le gt ge')
 generalCompOp = oneOf('= != < <= > >=')
 nodeCompOp = oneOf('is << >>')
 comparison = range + Optional((valueCompOp | generalCompOp | nodeCompOp) + range)
+comparison.setParseAction(binaryOpLeftAssocHelper)
 
 # Logical
 andExpr = comparison + ZeroOrMore(Keyword('and') + comparison)
+andExpr.setParseAction(binaryOpLeftAssocHelper)
 orExpr = andExpr + ZeroOrMore(Keyword('or') + andExpr)
+orExpr.setParseAction(binaryOpLeftAssocHelper)
 
 #
 # If, quantified and for
@@ -220,6 +223,7 @@ quantified = (Keyword('some') | Keyword('every')) + variableInExprList + Keyword
 #
 # TODO Make sure this is changed as we add more operators to the grammar
 singleExpr << (forExpr | quantified | ifExpr | orExpr)
+singleExpr.setParseAction(Expr)
 
 # Grammar definition
 Grammar = expr

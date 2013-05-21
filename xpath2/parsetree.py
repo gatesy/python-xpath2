@@ -8,6 +8,13 @@ Classes for representing nodes in the parse tree of an XPath2 expression
 
 from decimal import Decimal
 
+class Expr(object):
+    def __init__(self, tokens):
+        print(str(tokens))
+        
+    def __repr__(self):
+        return 'Expr'
+
 class QName(object):
     def __init__(self, tokens):
         if len(tokens) is 3:
@@ -135,18 +142,61 @@ class VariableRef(object):
         return 'VariableRef(' + str(self.name) + ')'
 
 class UnaryOp(object):
+    expr = None
+    op = None
+    
     def __init__(self, tokens):
         self.op = tokens[0]
+        self.expr = tokens[1]
         
     def __repr__(self):
-        return 'UnaryOp(' + self.op + ')'
+        return str(self.op) + '(' + str(self.expr) + ')'
+
+def unaryOpHelper(tokens):
+    if len(tokens) > 1:
+        return UnaryOp(tokens)
+    else:
+        return tokens
 
 class BinaryOp(object):
+    left = None
+    op = None
+    right = None
+    
     def __init__(self, tokens):
-        self.op = tokens[0]
+        self.left = tokens[0]
+        if len(tokens) > 1:
+            self.op = tokens[1]
+        if len(tokens) == 3:
+            self.right = tokens[2]
+        else:
+            self.right = BinaryOp(tokens[2:])
         
     def __repr__(self):
-        return 'BinaryOp(' + self.op + ')'
+        return str(self.op) + '(' + str(self.left) + ',' + str(self.right) + ')'
+
+class BinaryOpLeftAssoc(BinaryOp):
+    def __init__(self, tokens):
+        if len(tokens) > 3:
+            self.right = tokens[-1]
+            self.op = tokens[-2]
+            self.left = BinaryOpLeftAssoc(tokens[:-2])
+        else:
+            self.left = tokens[0]
+            self.op = tokens[1]
+            self.right = tokens[2]
+
+def binaryOpHelper(tokens):
+    if len(tokens) > 1:
+        return BinaryOp(tokens)
+    else:
+        return tokens
+
+def binaryOpLeftAssocHelper(tokens):
+    if len(tokens) > 1:
+        return BinaryOpLeftAssoc(tokens)
+    else:
+        return tokens    
 
 class KindTest(object):
     pass
@@ -187,3 +237,10 @@ class ContextItem(object):
         
     def __repr__(self):
         return 'ContextItem'
+        
+class FunctionCall(object):
+    def __init__(self, tokens):
+        pass
+        
+    def __repr(self):
+        return 'FunctionCall'
