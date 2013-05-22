@@ -149,7 +149,7 @@ signOp = oneOf('+ -')
 castAsOp = Keyword('cast') + Keyword('as') + singleType
 castableAsOp = Keyword('castable') + Keyword('as') + singleType
 treatAsOp = Keyword('treat') + Keyword('as') + sequenceType
-instanceOfOp = Keyword('instance') + Keyword('of') + sequenceType
+instanceOfOp = Keyword('instance') + Keyword('of')
 intersectOp = Keyword('intersect') | Keyword('except')
 unionOp = Keyword('union') | Literal('|')
 multiOp = Literal('*') | Literal('div') | Literal('idiv') | Literal('mod')
@@ -168,11 +168,15 @@ addOp = Literal('+') | Literal('-')
 #    ])
 
 unary = ZeroOrMore(signOp) + path
-unary.setParseAction(unaryOpHelper)
+unary.setParseAction(unaryOpRightAssocHelper)
 castAs = unary + Optional(castAsOp)
+castAs.setParseAction(binaryOpLeftAssocHelper2)
 castableAs = castAs + Optional(castableAsOp)
+castableAs.setParseAction(binaryOpLeftAssocHelper2)
 treatAs = castableAs + Optional(treatAsOp)
-instanceOf = treatAs + Optional(instanceOfOp)
+treatAs.setParseAction(binaryOpLeftAssocHelper2)
+instanceOf = treatAs + Optional(instanceOfOp + sequenceType)
+instanceOf.setParseAction(binaryOpLeftAssocHelper2)
 intersect = instanceOf + ZeroOrMore(intersectOp + instanceOf)
 intersect.setParseAction(binaryOpLeftAssocHelper)
 union = intersect + ZeroOrMore(unionOp + intersect)

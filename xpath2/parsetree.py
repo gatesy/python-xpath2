@@ -152,9 +152,19 @@ class UnaryOp(object):
     def __repr__(self):
         return str(self.op) + '(' + str(self.expr) + ')'
 
-def unaryOpHelper(tokens):
+class UnaryOpRightAssoc(UnaryOp):
+    def __init__(self, tokens):
+        self.op = tokens[0]
+        if len(tokens) == 2:
+            self.expr = tokens[1]
+        elif len(tokens) > 2:
+            self.expr = UnaryOpRightAssoc(tokens[1:])
+        else:
+            raise ValueError('Expected at least 2 tokens')
+
+def unaryOpRightAssocHelper(tokens):
     if len(tokens) > 1:
-        return UnaryOp(tokens)
+        return UnaryOpRightAssoc(tokens)
     else:
         return tokens
 
@@ -176,15 +186,15 @@ class BinaryOp(object):
         return str(self.op) + '(' + str(self.left) + ',' + str(self.right) + ')'
 
 class BinaryOpLeftAssoc(BinaryOp):
-    def __init__(self, tokens):
-        if len(tokens) > 3:
+    def __init__(self, tokens, opTokens=1):
+        if len(tokens) > (2 + opTokens):
             self.right = tokens[-1]
-            self.op = tokens[-2]
-            self.left = BinaryOpLeftAssoc(tokens[:-2])
+            self.op = '-'.join(tokens[-(1+opTokens):-1])
+            self.left = BinaryOpLeftAssoc(tokens[:-1-opTokens])
         else:
             self.left = tokens[0]
-            self.op = tokens[1]
-            self.right = tokens[2]
+            self.op = '-'.join(tokens[1:1+opTokens])
+            self.right = tokens[1 + opTokens]
 
 def binaryOpHelper(tokens):
     if len(tokens) > 1:
@@ -196,7 +206,13 @@ def binaryOpLeftAssocHelper(tokens):
     if len(tokens) > 1:
         return BinaryOpLeftAssoc(tokens)
     else:
-        return tokens    
+        return tokens  
+        
+def binaryOpLeftAssocHelper2(tokens):
+    if len(tokens) > 1:
+        return BinaryOpLeftAssoc(tokens, 2)
+    else:
+        return tokens
 
 class KindTest(object):
     pass
