@@ -3,7 +3,7 @@ python-xpath2
 
 A Python 3 implementation using ElementTree of XPath 2.0 and XSLT 2.0.
 
-Copyright (C) 2012-13 Dr. James S. Gate. 
+Copyright &copy; 2012-13 Dr. James S. Gate. 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
