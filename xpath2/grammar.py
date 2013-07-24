@@ -11,7 +11,6 @@ build the parse hierarchy.
 
 from pyparsing import *
 from xpath2.parsetree import *
-import unittest
 
 # Expressions: the top-level part of the recursion in the grammar.
 singleExpr = Forward() 
@@ -214,11 +213,14 @@ orExpr.setParseAction(binaryOpLeftAssocHelper)
 
 ifExpr = Keyword('if') + Literal('(') + expr + Literal(')') + Keyword('then') + singleExpr \
     + Keyword('else') + singleExpr
+ifExpr.setParseAction(IfExpr)
     
 variableInExprList = variableRef + Keyword('in') + singleExpr \
     + ZeroOrMore(Literal(',') + variableRef + Keyword('in') + singleExpr)
 
+
 forExpr = Keyword('for') + variableInExprList
+forExpr.setParseAction(ForExpr)
     
 quantified = (Keyword('some') | Keyword('every')) + variableInExprList + Keyword('satisfies') + singleExpr
 

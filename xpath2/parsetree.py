@@ -10,11 +10,47 @@ from decimal import Decimal
 
 class Expr(object):
     def __init__(self, tokens):
-        print(str(tokens))
+        self.child = tokens[0]
         
     def __repr__(self):
-        return 'Expr'
+        return 'Expr(' + str(self.child) + ')'
 
+class IfExpr(object):
+    def __init__(self, tokens):
+        self.test = tokens[2]
+        self.then = tokens[5]
+        self.otherwise = tokens[7]
+        
+    def __repr__(self):
+        return 'IfExpr(test=' + str(self.test) + '; then=' + str(self.then) \
+            + '; otherwise=' + str(self.otherwise) + ')' 
+
+class VarInExpr(object):
+    def __init__(self, variable, expression):
+        self.variable = variable
+        self.expression = expression
+        
+    def __repr__(self):
+        return '{var=' + str(self.variable) + '; expr=' + str(self.expression) + '}'
+
+class ForExpr(object):
+    varInExprs = []
+    
+    def __init__(self, tokens):
+        i = 1
+        while(i < len(tokens)):
+            self.varInExprs.append(VarInExpr(tokens[i], tokens[i+2]))
+            i += 4
+        
+    def __repr__(self):
+        return 'ForExpr ' + str(self.varInExprs)
+        
+class ExistentialQuantifier(object):
+    pass
+
+class UniversalQuantifier(object):
+    pass
+        
 class QName(object):
     def __init__(self, tokens):
         if len(tokens) is 3:
